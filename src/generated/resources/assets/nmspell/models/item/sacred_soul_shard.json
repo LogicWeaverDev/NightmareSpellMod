@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "nmspell:item/sacred_soul_shard"
+  }
+}
