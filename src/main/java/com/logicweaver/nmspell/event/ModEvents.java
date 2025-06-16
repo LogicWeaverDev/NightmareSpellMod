@@ -69,22 +69,7 @@ public class ModEvents {
 
     private static final Map<UUID, Set<UUID>> playerEngagedEntities = new HashMap<>();
 
-    @SubscribeEvent
-    public static void onAttachCapabilitiesEntity(AttachCapabilitiesEvent<Entity> event) {
-        Entity entity = event.getObject();
-
-        if (entity.level().isClientSide()) return;
-
-        if (entity instanceof Player) {
-            PlayerSoulProvider provider = new PlayerSoulProvider();
-            event.addCapability(new ResourceLocation(NMSpell.MODID, "properties"), provider);
-        } else if (entity instanceof Monster) {
-            CorruptedSoulProvider provider = new CorruptedSoulProvider((LivingEntity) entity);
-            event.addCapability(new ResourceLocation(NMSpell.MODID, "properties"), provider);
-
-            event.addListener(provider::invalidate);
-        }
-    }
+    // PLAYER EVENTS
 
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
@@ -122,6 +107,88 @@ public class ModEvents {
         }
     }
 
+    @SubscribeEvent
+    public static void onPlayerCloned(PlayerEvent.Clone event) {
+        // Only process death events
+        if (!event.isWasDeath()) {
+            System.out.println("Clone event (not death) - skipping");
+            return;
+        }
+
+        UUID playerUUID = event.getEntity().getUUID();
+        CompoundTag storedData = playerDeathData.get(playerUUID);
+
+        if (storedData != null) {
+
+            PlayerSoul newSoul = event.getEntity().getCapability(PlayerSoulProvider.PLAYER_SOUL).resolve().orElse(null);
+            if (newSoul != null) {
+                newSoul.loadNBTData(storedData);
+                newSoul.setAssociatedPlayer(event.getEntity());
+            } else {
+                System.out.println("ERROR: New player has no soul capability!");
+            }
+
+            // Clean up stored data
+            playerDeathData.remove(playerUUID);
+        } else {
+            System.out.println("No stored death data found for player");
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLogOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        UUID playerUUID = event.getEntity().getUUID();
+        playerDeathData.remove(playerUUID);
+        // Clean up player engagement tracking
+        playerEngagedEntities.remove(playerUUID);
+    }
+
+    @SubscribeEvent
+    public static void onPlayerStartTracking(PlayerEvent.StartTracking event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+
+        if (event.getTarget() instanceof LivingEntity target) {
+            ServerBossEvent bossEvent = BossBarHandler.getBossBar(target);
+            if (bossEvent != null && !bossEvent.getPlayers().contains(player)) {
+                double distSqr = player.distanceToSqr(target);
+                if (distSqr <= 75 * 75) {
+                    bossEvent.addPlayer(player);
+                    playerEngagedEntities.computeIfAbsent(player.getUUID(), k -> new HashSet<>()).add(target.getUUID());
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerStopTracking(PlayerEvent.StopTracking event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+
+        if (event.getEntity() != null) {
+            ServerBossEvent bossEvent = BossBarHandler.getBossBar(event.getEntity());
+            if (bossEvent != null) {
+                bossEvent.removePlayer(player);
+            }
+        }
+    }
+
+    // ENTITY EVENTS
+
+    @SubscribeEvent
+    public static void onAttachCapabilitiesEntity(AttachCapabilitiesEvent<Entity> event) {
+        Entity entity = event.getObject();
+
+        if (entity.level().isClientSide()) return;
+
+        if (entity instanceof Player) {
+            PlayerSoulProvider provider = new PlayerSoulProvider();
+            event.addCapability(new ResourceLocation(NMSpell.MODID, "properties"), provider);
+        } else if (entity instanceof Monster) {
+            CorruptedSoulProvider provider = new CorruptedSoulProvider((LivingEntity) entity);
+            event.addCapability(new ResourceLocation(NMSpell.MODID, "properties"), provider);
+
+            event.addListener(provider::invalidate);
+        }
+    }
     @SubscribeEvent
     public static void onLivingHurt(LivingHurtEvent event) {
 
@@ -259,132 +326,18 @@ public class ModEvents {
         }
     }
 
-    private static int glowUpdateTimer = 0;
-    private static final int GLOW_UPDATE_INTERVAL = 10; // Update every second (20 ticks)
-
-    // Enhanced glow handling with distance checking and optimization
     @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase == TickEvent.Phase.END) {
-            glowUpdateTimer++;
-
-            // Only update glow every GLOW_UPDATE_INTERVAL ticks for performance
-            if (glowUpdateTimer >= GLOW_UPDATE_INTERVAL) {
-                glowUpdateTimer = 0;
-
-                ServerLifecycleHooks.getCurrentServer().getAllLevels().forEach(level -> {
-                    level.getAllEntities().forEach(entity -> {
-                        if (entity instanceof LivingEntity livingEntity) {
-                            entity.getCapability(CorruptedSoulProvider.CORRUPTED_SOUL).ifPresent(soul -> {
-//                                boolean shouldGlow = isPlayerNearby(livingEntity) && soul.getAssociatedEntity() != null;
-
-                                boolean playerNearby = false;
-                                int maxDistance = 10 * soul.getRank();
-
-                                for (Player player : level.players()) {
-                                    if (player.distanceToSqr(entity) <= maxDistance * maxDistance) {
-                                        playerNearby = true;
-                                    }
-                                }
-
-                                boolean shouldGlow = (soul.getAssociatedEntity() != null && soul.getRank() > 0 && soul.getSoul_cores() > 0 && playerNearby);
-                                if (shouldGlow != livingEntity.isCurrentlyGlowing()) {
-                                    livingEntity.setGlowingTag(shouldGlow);
-                                }
-
-                                ServerBossEvent bossEvent = BossBarHandler.getBossBar(livingEntity);
-                                if (bossEvent != null) {
-                                    manageBossBarDistance(livingEntity, bossEvent, maxDistance);
-                                }
-                            });
-                        }
-                    });
-                });
-            }
-        }
-    }
-
-    private static void manageBossBarDistance(LivingEntity entity, ServerBossEvent bossEvent, int maxDistance) {
-        double maxDistanceSquared = maxDistance * maxDistance;
-        UUID entityUUID = entity.getUUID();
-
-        // Get all players currently on the boss bar
-        Set<ServerPlayer> playersToRemove = new HashSet<>();
-
-        // Check each player on the boss bar - remove if too far
-        for (ServerPlayer player : bossEvent.getPlayers()) {
-            double distanceSquared = player.distanceToSqr(entity);
-
-            if (distanceSquared > maxDistanceSquared) {
-                playersToRemove.add(player);
-            }
-        }
-
-        // Check ALL players in the level who are engaged with this entity
-        // Don't rely on getBoundingBox().inflate() which may not work as expected
-        for (ServerPlayer player : ((ServerLevel)entity.level()).players()) {
-            UUID playerUUID = player.getUUID();
-            Set<UUID> engagedEntities = playerEngagedEntities.get(playerUUID);
-
-            if (player.distanceToSqr(entity) <= maxDistanceSquared) {
-                bossEvent.addPlayer(player);
-                playerEngagedEntities.computeIfAbsent(playerUUID, k -> new HashSet<>()).add(entityUUID);
-            }
-        }
-
-        // Remove players who are too far
-        for (ServerPlayer player : playersToRemove) {
-            bossEvent.removePlayer(player);
-        }
-
-        // If no players remain on the boss bar, remove it entirely
-        if (bossEvent.getPlayers().isEmpty()) {
-            BossBarHandler.removeBossBar(entity);
-        }
-    }
-
-    @SubscribeEvent
-    public static void onPlayerCloned(PlayerEvent.Clone event) {
-        // Only process death events
-        if (!event.isWasDeath()) {
-            System.out.println("Clone event (not death) - skipping");
-            return;
-        }
-
-        UUID playerUUID = event.getEntity().getUUID();
-        CompoundTag storedData = playerDeathData.get(playerUUID);
-
-        if (storedData != null) {
-
-            PlayerSoul newSoul = event.getEntity().getCapability(PlayerSoulProvider.PLAYER_SOUL).resolve().orElse(null);
-            if (newSoul != null) {
-                newSoul.loadNBTData(storedData);
-                newSoul.setAssociatedPlayer(event.getEntity());
-            } else {
-                System.out.println("ERROR: New player has no soul capability!");
+    public static void onEntityRemove(EntityLeaveLevelEvent event) {
+        if (event.getEntity() instanceof  LivingEntity) {
+            ServerBossEvent bossEvent = BossBarHandler.removeBossBar((LivingEntity) event.getEntity());
+            if (bossEvent != null) {
+                bossEvent.removeAllPlayers();
             }
 
-            // Clean up stored data
-            playerDeathData.remove(playerUUID);
-        } else {
-            System.out.println("No stored death data found for player");
+            UUID entityUUID = event.getEntity().getUUID();
+//            engagedCreatures.remove(entityUUID);
+            playerEngagedEntities.values().forEach(set -> set.remove(entityUUID));
         }
-    }
-
-    @SubscribeEvent
-    public static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
-        event.register(PlayerSoul.class);
-        event.register(CorruptedSoul.class);
-    }
-
-    @SubscribeEvent
-    public static void onCommandsRegister(RegisterCommandsEvent event) {
-        new SetPlayerRankCommand(event.getDispatcher());
-        new SetPlayerClassCommand(event.getDispatcher());
-        new SetPlayerSoulFragmentsCommand(event.getDispatcher());
-        new SummonNIghtmareCreatureCommand(event.getDispatcher());
-
-        ConfigCommand.register(event.getDispatcher());
     }
 
     @SubscribeEvent
@@ -440,6 +393,151 @@ public class ModEvents {
         }
     }
 
+    // TICK EVENTS
+
+    private static int glowUpdateTimer = 0;
+    private static final int GLOW_UPDATE_INTERVAL = 10; // Update every second (20 ticks)
+
+    @SubscribeEvent
+    public static void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            glowUpdateTimer++;
+
+            // Only update glow every GLOW_UPDATE_INTERVAL ticks for performance
+            if (glowUpdateTimer >= GLOW_UPDATE_INTERVAL) {
+                glowUpdateTimer = 0;
+
+                ServerLifecycleHooks.getCurrentServer().getAllLevels().forEach(level -> {
+                    level.getAllEntities().forEach(entity -> {
+                        if (entity instanceof LivingEntity livingEntity) {
+                            entity.getCapability(CorruptedSoulProvider.CORRUPTED_SOUL).ifPresent(soul -> {
+//                                boolean shouldGlow = isPlayerNearby(livingEntity) && soul.getAssociatedEntity() != null;
+
+                                boolean playerNearby = false;
+                                int maxDistance = 10 * soul.getRank();
+
+                                for (Player player : level.players()) {
+                                    if (player.distanceToSqr(entity) <= maxDistance * maxDistance) {
+                                        playerNearby = true;
+                                    }
+                                }
+
+                                boolean shouldGlow = (soul.getAssociatedEntity() != null && soul.getRank() > 0 && soul.getSoul_cores() > 0 && playerNearby);
+                                if (shouldGlow != livingEntity.isCurrentlyGlowing()) {
+                                    livingEntity.setGlowingTag(shouldGlow);
+                                }
+
+                                ServerBossEvent bossEvent = BossBarHandler.getBossBar(livingEntity);
+                                if (bossEvent != null) {
+                                    manageBossBarDistance(livingEntity, bossEvent, maxDistance);
+                                }
+                            });
+                        }
+                    });
+                });
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLivingTick(LivingEvent.LivingTickEvent event) {
+        if (event.getEntity().level().isClientSide()) return;
+        event.getEntity().getCapability(CorruptedSoulProvider.CORRUPTED_SOUL).ifPresent(soul -> {
+            if (soul.getAssociatedEntity() == null && event.getEntity().tickCount % 200 == 0) {
+                soul.tryRestoreEntity((ServerLevel) event.getEntity().level());
+            } else {
+                ServerBossEvent bossEvent = BossBarHandler.getBossBar(event.getEntity());
+                if (bossEvent != null) {
+                    bossEvent.setProgress(event.getEntity().getHealth() / event.getEntity().getMaxHealth());
+                }
+            }
+        });
+    }
+
+    // LEVEL EVENTS
+
+    @SubscribeEvent
+    public static void onLevelLoad(LevelEvent.Load event) {
+        if (event.getLevel().isClientSide()) return;
+        ServerLevel level = (ServerLevel) event.getLevel();
+        Scoreboard scoreboard = level.getScoreboard();
+
+        for (Map.Entry<Integer, ChatFormatting> entry : HierarchyUtils.getColorMap().entrySet()) {
+            String teamName1 = HierarchyUtils.getAscensionRank(entry.getKey());
+            String teamName2 = HierarchyUtils.getCorruptionRank(entry.getKey());
+            if (scoreboard.getPlayersTeam(teamName1) == null) {
+                PlayerTeam team =  scoreboard.addPlayerTeam(teamName1);
+                team.setColor(entry.getValue());
+                scoreboard.addPlayerToTeam("dummy_" + teamName1, team);
+            }
+            if (scoreboard.getPlayersTeam(teamName2) == null) {
+                PlayerTeam team =  scoreboard.addPlayerTeam(teamName2);
+                team.setColor(entry.getValue());
+                scoreboard.addPlayerToTeam("dummy_" + teamName2, team);
+            }
+            System.out.println("Created team: " + teamName1 + " and " + teamName2);
+        }
+    }
+
+    // REGISTER EVENTS
+
+    @SubscribeEvent
+    public static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
+        event.register(PlayerSoul.class);
+        event.register(CorruptedSoul.class);
+    }
+
+    @SubscribeEvent
+    public static void onCommandsRegister(RegisterCommandsEvent event) {
+        new SetPlayerRankCommand(event.getDispatcher());
+        new SetPlayerClassCommand(event.getDispatcher());
+        new SetPlayerSoulFragmentsCommand(event.getDispatcher());
+        new SummonNIghtmareCreatureCommand(event.getDispatcher());
+
+        ConfigCommand.register(event.getDispatcher());
+    }
+
+    // METHODS
+
+    private static void manageBossBarDistance(LivingEntity entity, ServerBossEvent bossEvent, int maxDistance) {
+        double maxDistanceSquared = maxDistance * maxDistance;
+        UUID entityUUID = entity.getUUID();
+
+        // Get all players currently on the boss bar
+        Set<ServerPlayer> playersToRemove = new HashSet<>();
+
+        // Check each player on the boss bar - remove if too far
+        for (ServerPlayer player : bossEvent.getPlayers()) {
+            double distanceSquared = player.distanceToSqr(entity);
+
+            if (distanceSquared > maxDistanceSquared) {
+                playersToRemove.add(player);
+            }
+        }
+
+        // Check ALL players in the level who are engaged with this entity
+        // Don't rely on getBoundingBox().inflate() which may not work as expected
+        for (ServerPlayer player : ((ServerLevel)entity.level()).players()) {
+            UUID playerUUID = player.getUUID();
+            Set<UUID> engagedEntities = playerEngagedEntities.get(playerUUID);
+
+            if (player.distanceToSqr(entity) <= maxDistanceSquared) {
+                bossEvent.addPlayer(player);
+                playerEngagedEntities.computeIfAbsent(playerUUID, k -> new HashSet<>()).add(entityUUID);
+            }
+        }
+
+        // Remove players who are too far
+        for (ServerPlayer player : playersToRemove) {
+            bossEvent.removePlayer(player);
+        }
+
+        // If no players remain on the boss bar, remove it entirely
+        if (bossEvent.getPlayers().isEmpty()) {
+            BossBarHandler.removeBossBar(entity);
+        }
+    }
+
     private static void setUpNightmareCreature(Entity entity, CorruptedSoul soul) {
 
         CorruptSoulDataSyncS2CPacket packet = new CorruptSoulDataSyncS2CPacket(
@@ -467,94 +565,6 @@ public class ModEvents {
         CompoundTag compoundTag = entity.getPersistentData();
 
         return compoundTag.getBoolean("summoned_nightmare_creature");
-    }
-
-    @SubscribeEvent
-    public static void onPlayerStartTracking(PlayerEvent.StartTracking event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
-
-        if (event.getTarget() instanceof LivingEntity target) {
-            ServerBossEvent bossEvent = BossBarHandler.getBossBar(target);
-            if (bossEvent != null && !bossEvent.getPlayers().contains(player)) {
-                double distSqr = player.distanceToSqr(target);
-                if (distSqr <= 75 * 75) {
-                    bossEvent.addPlayer(player);
-                    playerEngagedEntities.computeIfAbsent(player.getUUID(), k -> new HashSet<>()).add(target.getUUID());
-                }
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public static void onPlayerStopTracking(PlayerEvent.StopTracking event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
-
-        if (event.getEntity() != null) {
-            ServerBossEvent bossEvent = BossBarHandler.getBossBar(event.getEntity());
-            if (bossEvent != null) {
-                bossEvent.removePlayer(player);
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public static void onEntityRemove(EntityLeaveLevelEvent event) {
-        if (event.getEntity() instanceof  LivingEntity) {
-            ServerBossEvent bossEvent = BossBarHandler.removeBossBar((LivingEntity) event.getEntity());
-            if (bossEvent != null) {
-                bossEvent.removeAllPlayers();
-            }
-
-            UUID entityUUID = event.getEntity().getUUID();
-//            engagedCreatures.remove(entityUUID);
-            playerEngagedEntities.values().forEach(set -> set.remove(entityUUID));
-        }
-    }
-
-    @SubscribeEvent
-    public static void onLivingTick(LivingEvent.LivingTickEvent event) {
-        if (event.getEntity().level().isClientSide()) return;
-        event.getEntity().getCapability(CorruptedSoulProvider.CORRUPTED_SOUL).ifPresent(soul -> {
-            if (soul.getAssociatedEntity() == null && event.getEntity().tickCount % 200 == 0) {
-                soul.tryRestoreEntity((ServerLevel) event.getEntity().level());
-            } else {
-                ServerBossEvent bossEvent = BossBarHandler.getBossBar(event.getEntity());
-                if (bossEvent != null) {
-                    bossEvent.setProgress(event.getEntity().getHealth() / event.getEntity().getMaxHealth());
-                }
-            }
-        });
-    }
-
-    @SubscribeEvent
-    public static void onPlayerLogOut(PlayerEvent.PlayerLoggedOutEvent event) {
-        UUID playerUUID = event.getEntity().getUUID();
-        playerDeathData.remove(playerUUID);
-        // Clean up player engagement tracking
-        playerEngagedEntities.remove(playerUUID);
-    }
-
-    @SubscribeEvent
-    public static void onLevelLoad(LevelEvent.Load event) {
-        if (event.getLevel().isClientSide()) return;
-        ServerLevel level = (ServerLevel) event.getLevel();
-        Scoreboard scoreboard = level.getScoreboard();
-
-        for (Map.Entry<Integer, ChatFormatting> entry : HierarchyUtils.getColorMap().entrySet()) {
-            String teamName1 = HierarchyUtils.getAscensionRank(entry.getKey());
-            String teamName2 = HierarchyUtils.getCorruptionRank(entry.getKey());
-            if (scoreboard.getPlayersTeam(teamName1) == null) {
-                PlayerTeam team =  scoreboard.addPlayerTeam(teamName1);
-                team.setColor(entry.getValue());
-                scoreboard.addPlayerToTeam("dummy_" + teamName1, team);
-            }
-            if (scoreboard.getPlayersTeam(teamName2) == null) {
-                PlayerTeam team =  scoreboard.addPlayerTeam(teamName2);
-                team.setColor(entry.getValue());
-                scoreboard.addPlayerToTeam("dummy_" + teamName2, team);
-            }
-            System.out.println("Created team: " + teamName1 + " and " + teamName2);
-        }
     }
 
 }
