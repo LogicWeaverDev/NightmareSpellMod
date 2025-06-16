@@ -8,18 +8,16 @@ import com.logicweaver.nmspell.commands.SummonNIghtmareCreatureCommand;
 import com.logicweaver.nmspell.entity.CorruptedSoul;
 import com.logicweaver.nmspell.entity.CorruptedSoulProvider;
 import com.logicweaver.nmspell.item.ModItems;
-import com.logicweaver.nmspell.item.classes.SoulShardItem;
 import com.logicweaver.nmspell.networking.ModNetworking;
 import com.logicweaver.nmspell.networking.packet.CorruptSoulDataSyncS2CPacket;
 import com.logicweaver.nmspell.networking.packet.SoulDataSyncS2CPacket;
 import com.logicweaver.nmspell.soul.PlayerSoul;
 import com.logicweaver.nmspell.soul.PlayerSoulProvider;
-import com.logicweaver.nmspell.soul.SoulStatManager;
 import com.logicweaver.nmspell.util.BossBarHandler;
 import com.logicweaver.nmspell.util.HierarchyUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.client.Options;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -27,22 +25,16 @@ import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityEvent;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.food.FoodData;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Rarity;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
+import net.minecraftforge.common.extensions.IForgeEntity;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
@@ -55,7 +47,6 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.registries.RegistryObject;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import net.minecraftforge.server.command.ConfigCommand;
 
@@ -63,11 +54,9 @@ import java.util.*;
 
 @Mod.EventBusSubscriber(modid = NMSpell.MODID)
 public class ModEvents {
-    // Store soul data when player dies
-    private static final Map<UUID, CompoundTag> playerDeathData = new HashMap<>();
-    private static final Random random = new Random();
-
     private static final Map<UUID, Set<UUID>> playerEngagedEntities = new HashMap<>();
+
+    private static final Random random = new Random();
 
     // PLAYER EVENTS
 
@@ -109,37 +98,28 @@ public class ModEvents {
 
     @SubscribeEvent
     public static void onPlayerCloned(PlayerEvent.Clone event) {
-        // Only process death events
-        if (!event.isWasDeath()) {
-            System.out.println("Clone event (not death) - skipping");
-            return;
-        }
+        event.getOriginal().reviveCaps();
 
-        UUID playerUUID = event.getEntity().getUUID();
-        CompoundTag storedData = playerDeathData.get(playerUUID);
+        PlayerSoul soul = event.getOriginal().getCapability(PlayerSoulProvider.PLAYER_SOUL).resolve().orElse(null);
 
-        if (storedData != null) {
+        if (soul != null) {
+            System.out.println("Original soul bonus: " + soul.getBonus());
 
-            PlayerSoul newSoul = event.getEntity().getCapability(PlayerSoulProvider.PLAYER_SOUL).resolve().orElse(null);
-            if (newSoul != null) {
-                newSoul.loadNBTData(storedData);
+            event.getEntity().getCapability(PlayerSoulProvider.PLAYER_SOUL).ifPresent(newSoul -> {
+                newSoul.copyFrom(soul);
+
                 newSoul.setAssociatedPlayer(event.getEntity());
-            } else {
-                System.out.println("ERROR: New player has no soul capability!");
-            }
+                System.out.println("Successfully copied soul data to new player");
+            });
+        };
 
-            // Clean up stored data
-            playerDeathData.remove(playerUUID);
-        } else {
-            System.out.println("No stored death data found for player");
-        }
+        event.getOriginal().invalidateCaps();
     }
 
     @SubscribeEvent
     public static void onPlayerLogOut(PlayerEvent.PlayerLoggedOutEvent event) {
         UUID playerUUID = event.getEntity().getUUID();
-        playerDeathData.remove(playerUUID);
-        // Clean up player engagement tracking
+
         playerEngagedEntities.remove(playerUUID);
     }
 
@@ -273,12 +253,10 @@ public class ModEvents {
     public static void onLivingDeath(LivingDeathEvent event) {
         LivingEntity entity = event.getEntity();
         if (entity instanceof ServerPlayer player) {
-            // Capture the soul data BEFORE the player entity is destroyed
             PlayerSoul soul = player.getCapability(PlayerSoulProvider.PLAYER_SOUL).resolve().orElse(null);
             if (soul != null) {
                 CompoundTag soulData = new CompoundTag();
                 soul.saveNBTData(soulData);
-                playerDeathData.put(player.getUUID(), soulData);
             } else {
                 System.out.println("ERROR: Could not get soul capability on death!");
             }

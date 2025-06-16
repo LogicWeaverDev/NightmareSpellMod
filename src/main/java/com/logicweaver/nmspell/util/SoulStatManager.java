@@ -1,12 +1,15 @@
-package com.logicweaver.nmspell.soul;
+package com.logicweaver.nmspell.util;
 
 import com.logicweaver.nmspell.entity.CorruptedSoul;
+import com.logicweaver.nmspell.soul.PlayerSoul;
+import com.logicweaver.nmspell.soul.PlayerSoulProvider;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.common.ForgeMod;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,6 +21,7 @@ public class SoulStatManager {
     private static final UUID NMSPELL_ATTACK = UUID.fromString("7f80feba-54ca-4a29-9494-aa857a070dc2");
     private static final UUID NMSPELL_SPEED = UUID.fromString("89e8d1df-31da-4335-9fdf-ddb88a4aec54");
     private static final UUID NMSPELL_ARMOR = UUID.fromString("12345678-1234-5678-9abc-def012345678");
+    private static final UUID NMSPELL_STEP_UP = UUID.fromString("5b2a0250-8d1c-48d4-881c-067ba87650c2");
 
     // Track entity sprinting state to avoid unnecessary updates
     public static final Map<UUID, Boolean> wasSprintingMap = new HashMap<>();
@@ -57,6 +61,13 @@ public class SoulStatManager {
         applyAttributeModifier(entity, Attributes.ARMOR,
                 NMSPELL_ARMOR, "Nightmare Spell Armor",
                 soul.getBonus(), AttributeModifier.Operation.ADDITION);
+
+        // Apply step up
+        if (soul.getRank() >= 4) {
+            applyAttributeModifier(entity, ForgeMod.STEP_HEIGHT_ADDITION.get(),
+                    NMSPELL_STEP_UP, "Nightmare Spell Step Up",
+                    0.6, AttributeModifier.Operation.ADDITION);
+        }
     }
 
     public static void applyStatsToEntity(LivingEntity entity, CorruptedSoul soul) {
@@ -95,7 +106,12 @@ public class SoulStatManager {
                 NMSPELL_ARMOR, "Nightmare Spell Armor",
                 soul.getBonus(), AttributeModifier.Operation.ADDITION);
 
-        System.out.println("Stats applied successfully. New max health: " + entity.getMaxHealth());
+        // Apply step up
+        if (soul.getRank() >= 4) {
+            applyAttributeModifier(entity, ForgeMod.STEP_HEIGHT_ADDITION.get(),
+                    NMSPELL_STEP_UP, "Nightmare Spell Step Up",
+                    0.6, AttributeModifier.Operation.ADDITION);
+        }
     }
 
     /**

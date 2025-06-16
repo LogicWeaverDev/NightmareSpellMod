@@ -2,12 +2,9 @@ package com.logicweaver.nmspell.entity;
 
 import com.logicweaver.nmspell.networking.ModNetworking;
 import com.logicweaver.nmspell.networking.packet.CorruptSoulDataSyncS2CPacket;
-import com.logicweaver.nmspell.networking.packet.SoulDataSyncS2CPacket;
-import com.logicweaver.nmspell.soul.SoulStatManager;
+import com.logicweaver.nmspell.util.SoulStatManager;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.protocol.Packet;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;

@@ -2,6 +2,7 @@ package com.logicweaver.nmspell.soul;
 
 import com.logicweaver.nmspell.networking.ModNetworking;
 import com.logicweaver.nmspell.networking.packet.SoulDataSyncS2CPacket;
+import com.logicweaver.nmspell.util.SoulStatManager;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.Attributes;

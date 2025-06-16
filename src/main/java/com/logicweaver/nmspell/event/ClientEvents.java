@@ -1,23 +1,16 @@
 package com.logicweaver.nmspell.event;
 
 import com.logicweaver.nmspell.NMSpell;
-import com.logicweaver.nmspell.client.ClientCorruptSoulData;
 import com.logicweaver.nmspell.networking.ModNetworking;
 import com.logicweaver.nmspell.networking.packet.TogglePerceptionC2SPacket;
-import com.logicweaver.nmspell.soul.SoulStatManager;
-import com.logicweaver.nmspell.util.HierarchyUtils;
+import com.logicweaver.nmspell.util.SoulStatManager;
 import com.logicweaver.nmspell.util.KeyBinding;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.scores.PlayerTeam;
-import net.minecraft.world.scores.Scoreboard;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
