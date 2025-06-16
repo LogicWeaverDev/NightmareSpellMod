@@ -1,10 +1,10 @@
 package com.logicweaver.nmspell.item;
 
 import com.logicweaver.nmspell.NMSpell;
+import com.logicweaver.nmspell.item.classes.RankRegressionItem;
 import com.logicweaver.nmspell.item.classes.SoulShardItem;
 import com.logicweaver.nmspell.util.HierarchyUtils;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.Rarity;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -20,6 +20,9 @@ public class ModItems {
 
     public static final List<RegistryObject<Item>> SOUL_SHARDS = new ArrayList<>();
 
+    public static final RegistryObject<Item> RANK_REGRESSION = ITEMS.register("rank_regression",
+            () -> new RankRegressionItem(new Item.Properties()));
+
     static {
         for (Map.Entry<Integer, String> entry : HierarchyUtils.getAscensionPath().entrySet()) {
             int rank = entry.getKey();
@@ -34,7 +37,6 @@ public class ModItems {
             });
 
             SOUL_SHARDS.add(soul_shard);
-
         }
     }
 

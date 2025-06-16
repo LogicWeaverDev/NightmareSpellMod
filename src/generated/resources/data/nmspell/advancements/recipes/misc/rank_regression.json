@@ -1,0 +1,35 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_divine_soul_shard": {
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "nmspell:divine_soul_shard"
+            ]
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "nmspell:rank_regression"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_divine_soul_shard",
+      "has_the_recipe"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "nmspell:rank_regression"
+    ]
+  },
+  "sends_telemetry_event": false
+}

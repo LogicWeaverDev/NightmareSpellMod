@@ -22,7 +22,7 @@ public class PlayerSoul {
     private int stronger_entities_killed = 0;
 
     private final int GLOBAL_MIN = 0;
-    private final int GLOBAL_MAX = 7;
+    public final int GLOBAL_MAX = 7;
 
     private List<Consumer<PlayerSoul>> changeListeners = new ArrayList<>();
 

@@ -25,6 +25,8 @@ public class ModItemModelProvider extends ItemModelProvider {
             simpleItem(soulShard);
         }
 
+        simpleItem(ModItems.RANK_REGRESSION);
+
     }
 
     private ItemModelBuilder simpleItem(RegistryObject<Item> item) {

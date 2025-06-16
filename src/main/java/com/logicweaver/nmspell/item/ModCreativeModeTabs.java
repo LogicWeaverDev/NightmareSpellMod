@@ -21,11 +21,11 @@ public class ModCreativeModeTabs {
 
     public static final RegistryObject<CreativeModeTab> NMSPELL_TAB = CREATIVE_MODE_TABS.register("nmspell_tab",
             () -> CreativeModeTab.builder()
-                    .icon(() -> new ItemStack(Items.SNOWBALL))
+                    .icon(() -> new ItemStack(ModItems.SOUL_SHARDS.get(6).get()))
                     .title(Component.translatable("creativetab.nmspell"))
                     .displayItems((pParameters, pOutput) -> {
+                        pOutput.accept(ModItems.RANK_REGRESSION.get());
                         for (RegistryObject<Item> soulShard : ModItems.SOUL_SHARDS) {
-
                             pOutput.accept(soulShard.get());
                         }
                     })
