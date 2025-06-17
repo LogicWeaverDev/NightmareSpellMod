@@ -231,20 +231,16 @@ public class ModEvents {
 
         if (event.getEntity() instanceof Player player) {
             player.getCapability(PlayerSoulProvider.PLAYER_SOUL).ifPresent(soul -> {
-                if (event.getSource().is(DamageTypeTags.IS_FIRE)) {
-                    int rank = soul.getRank(); // Get player's rank
-                    float reduction = 1.0f - (rank * 0.1f); // 10% less damage per rank
-                    event.setAmount(event.getAmount() * reduction);
-                }
+                int rank = soul.getRank(); // Get player's rank
+                float reduction = 1.0f - (rank * 0.1f); // 10% less damage per rank
+                event.setAmount(event.getAmount() * reduction);
             });
         } else if (event.getEntity() instanceof Monster monster) {
             monster.getCapability(CorruptedSoulProvider.CORRUPTED_SOUL).ifPresent(soul -> {
                 if (soul.getAssociatedEntity() == null || soul.getRank() <= 0 || soul.getSoul_cores() <= 0) { return; }
-                if (event.getSource().is(DamageTypeTags.IS_FIRE)) {
-                    int rank = soul.getRank(); // Get player's rank
-                    float reduction = 1.0f - (rank * 0.1f); // 10% less damage per rank
-                    event.setAmount(event.getAmount() * reduction);
-                }
+                int rank = soul.getRank(); // Get player's rank
+                float reduction = 1.0f - (rank * 0.1f); // 10% less damage per rank
+                event.setAmount(event.getAmount() * reduction);
             });
         }
     }

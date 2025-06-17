@@ -67,6 +67,8 @@ public class SoulStatManager {
             applyAttributeModifier(entity, ForgeMod.STEP_HEIGHT_ADDITION.get(),
                     NMSPELL_STEP_UP, "Nightmare Spell Step Up",
                     0.6, AttributeModifier.Operation.ADDITION);
+        } else {
+            removeAttributeModifier(entity, ForgeMod.STEP_HEIGHT_ADDITION.get(), NMSPELL_STEP_UP);
         }
     }
 
@@ -111,29 +113,11 @@ public class SoulStatManager {
             applyAttributeModifier(entity, ForgeMod.STEP_HEIGHT_ADDITION.get(),
                     NMSPELL_STEP_UP, "Nightmare Spell Step Up",
                     0.6, AttributeModifier.Operation.ADDITION);
+        } else {
+            removeAttributeModifier(entity, ForgeMod.STEP_HEIGHT_ADDITION.get(), NMSPELL_STEP_UP);
         }
     }
 
-    /**
-     * Remove all soul-based stat bonuses from a entity
-     */
-
-    public static void removeStatsFromPlayer(LivingEntity entity) {
-        if (entity == null) return;
-
-        removeAttributeModifier(entity, Attributes.MAX_HEALTH, NMSPELL_HEALTH);
-        removeAttributeModifier(entity, Attributes.ATTACK_DAMAGE, NMSPELL_ATTACK);
-        removeAttributeModifier(entity, Attributes.MOVEMENT_SPEED, NMSPELL_SPEED);
-        removeAttributeModifier(entity, Attributes.ARMOR, NMSPELL_ARMOR);
-
-        // Clean up sprinting state tracking
-        wasSprintingMap.remove(entity.getUUID());
-    }
-
-    /**
-     * Update sprint speed bonus based on entity's current sprinting state
-     * Call this from a entity tick event or similar
-     */
     public static void updateSprintSpeed(LivingEntity entity) {
         if (entity == null) return;
 
@@ -165,9 +149,6 @@ public class SoulStatManager {
         });
     }
 
-    /**
-     * Apply or update an attribute modifier
-     */
     private static void applyAttributeModifier(LivingEntity entity,
                                                Attribute attribute,
                                                UUID uuid, String name, double amount,
@@ -185,39 +166,10 @@ public class SoulStatManager {
         }
     }
 
-    /**
-     * Remove an attribute modifier
-     */
     private static void removeAttributeModifier(LivingEntity entity, Attribute attribute, UUID uuid) {
         AttributeInstance attributeInstance = entity.getAttribute(attribute);
         if (attributeInstance != null) {
             attributeInstance.removeModifier(uuid);
         }
-    }
-
-    /**
-     * Get the total value of an attribute (base + all modifiers)
-     * Useful for debugging or display purposes
-     */
-    public static double getAttributeValue(LivingEntity entity, Attribute attribute) {
-        AttributeInstance attributeInstance = entity.getAttribute(attribute);
-        return attributeInstance != null ? attributeInstance.getValue() : 0.0;
-    }
-
-    /**
-     * Check if a entity has our soul modifier applied to an attribute
-     */
-    public static boolean hasModifier(LivingEntity entity, Attribute attribute, UUID modifierUUID) {
-        AttributeInstance attributeInstance = entity.getAttribute(attribute);
-        return attributeInstance != null && attributeInstance.getModifier(modifierUUID) != null;
-    }
-
-    /**
-     * Force refresh all stats for a entity - useful after loading from NBT
-     */
-    public static void refreshPlayerStats(LivingEntity entity) {
-        entity.getCapability(PlayerSoulProvider.PLAYER_SOUL).ifPresent(soul -> {
-            applyStatsToEntity(entity, soul);
-        });
     }
 }

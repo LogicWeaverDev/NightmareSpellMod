@@ -178,6 +178,7 @@ public class PlayerSoul {
 
         this.rank = soul.rank;
         this.soul_cores = soul.soul_cores;
+        this.stronger_entities_killed = soul.stronger_entities_killed;
     }
 
     public void saveNBTData(CompoundTag nbt) {
