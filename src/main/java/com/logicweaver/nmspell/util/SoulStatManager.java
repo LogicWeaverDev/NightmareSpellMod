@@ -84,7 +84,7 @@ public class SoulStatManager {
         // Apply health bonus
         applyAttributeModifier(entity, Attributes.MAX_HEALTH,
                 NMSPELL_HEALTH, "Nightmare Spell Health",
-                soul.getBonus() * 2, AttributeModifier.Operation.ADDITION);
+                soul.getBonus(), AttributeModifier.Operation.ADDITION);
 
         // Restore health percentage (but don't exceed new max health)
         float newHealth = (float) Math.min(

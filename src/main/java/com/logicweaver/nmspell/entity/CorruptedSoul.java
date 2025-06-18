@@ -69,7 +69,7 @@ public class CorruptedSoul implements INBTSerializable<CompoundTag> {
     }
 
     public double getBonus() {
-        return (((soul_cores + ((soul_fragments / 1000.0)/soul_cores))/GLOBAL_MAX) * (rank * rank * rank))*2;
+        return (((soul_cores + ((soul_fragments / 1000.0)/soul_cores))/GLOBAL_MAX) * (rank * rank * rank))*1.1;
     }
 
     public void addSoulFragments(double amount) {
