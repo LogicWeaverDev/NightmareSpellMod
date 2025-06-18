@@ -15,6 +15,7 @@ import com.logicweaver.nmspell.soul.PlayerSoul;
 import com.logicweaver.nmspell.soul.PlayerSoulProvider;
 import com.logicweaver.nmspell.util.BossBarHandler;
 import com.logicweaver.nmspell.util.HierarchyUtils;
+import com.logicweaver.nmspell.util.SlowTimeHandler;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
@@ -30,6 +31,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.food.FoodData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
@@ -74,7 +76,7 @@ public class ModEvents {
                         event.player.setAirSupply(event.player.getAirSupply() + 1); // Counteract normal loss
                     }
                 }
-                // Reduce hunger depletion rate
+//                // Reduce hunger depletion rate
 //                if (event.player.tickCount % Math.max(1, (int)(1.0f / hungerEfficiency)) == 0) {
 //                    FoodData foodData = event.player.getFoodData();
 //
@@ -85,7 +87,7 @@ public class ModEvents {
 //                        System.out.println(foodData.getExhaustionLevel() * hungerEfficiency);
 //                        foodData.setExhaustion(foodData.getExhaustionLevel() * hungerEfficiency);
 //                    }
-
+//
 //                    // Cap saturation to food level to avoid infinite growth
 //                    float saturation = foodData.getSaturationLevel();
 //                    float maxSaturation = foodData.getFoodLevel();
@@ -119,6 +121,8 @@ public class ModEvents {
     @SubscribeEvent
     public static void onPlayerLogOut(PlayerEvent.PlayerLoggedOutEvent event) {
         UUID playerUUID = event.getEntity().getUUID();
+
+        SlowTimeHandler.resetPlayerTime((ServerPlayer) event.getEntity());
 
         playerEngagedEntities.remove(playerUUID);
     }
