@@ -25,6 +25,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 public class SummonNIghtmareCreatureCommand {
     public SummonNIghtmareCreatureCommand(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("summon_nightmare_creature")
+                .requires(source -> source.hasPermission(2))
                 .then(Commands.argument("entity", ResourceLocationArgument.id())
                         .suggests((context, builder) -> {
                             return SharedSuggestionProvider.suggestResource(

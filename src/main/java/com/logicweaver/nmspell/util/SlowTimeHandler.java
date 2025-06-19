@@ -11,7 +11,7 @@ import java.util.Map;
 
 public class SlowTimeHandler {
 
-    private static int BASE_TICKRATE = 20;
+    public static final int BASE_TICKRATE = 20;
     private static Map<Player, Float> playersSlowingTime = new HashMap<>();
 
     public static void ToggleSlowTime(Player player){
@@ -28,29 +28,31 @@ public class SlowTimeHandler {
 
     public static void slowTimeAroundPlayer(ServerPlayer player, PlayerSoul soul) {
         float tickrate = 20*(1.0f - (soul.getRank() * 0.1f));
-        float highestTickrate = tickrate;
+        float lowestTickrate = tickrate;
 
         playersSlowingTime.put(player, tickrate);
 
         for (Map.Entry<Player, Float> entry : playersSlowingTime.entrySet()) {
-            if (entry.getValue() <= tickrate) { return; }
-            highestTickrate = entry.getValue();
+            if (entry.getValue() >= tickrate) { continue; }
+            lowestTickrate = entry.getValue();
         }
 
-        TickrateUtil.setLevelTickrate(player.level().dimension(), highestTickrate);
+        System.out.println(lowestTickrate);
+
+        TickrateUtil.setLevelTickrate(player.level().dimension(), lowestTickrate);
 
     }
 
     public static void  resetPlayerTime(ServerPlayer player) {
-        float highestTickrate = BASE_TICKRATE;
+        float lowestTickrate = BASE_TICKRATE;
         playersSlowingTime.remove(player);
 
         for (Map.Entry<Player, Float> entry : playersSlowingTime.entrySet()) {
-            if (entry.getValue() <= highestTickrate) { return; }
-            highestTickrate = entry.getValue();
+            if (entry.getValue() >= lowestTickrate) { continue; }
+            lowestTickrate = entry.getValue();
         }
 
-        TickrateUtil.setLevelTickrate(player.level().dimension(), highestTickrate);
+        TickrateUtil.setLevelTickrate(player.level().dimension(), lowestTickrate);
     }
 
     public static Map<Player, Float> getPlayersSlowingTime() {

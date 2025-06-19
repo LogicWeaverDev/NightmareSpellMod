@@ -68,7 +68,7 @@ public class HierarchyUtils {
         return createScaledRarityMap(averageCapability, scalingFactor);
     }
 
-    private static double getAveragePlayerCapability() {
+    public static double getAveragePlayerCapability() {
         if (ServerLifecycleHooks.getCurrentServer() == null) {
             return 1.0; // Default if no server available
         }

@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerPlayer;
 public class SetPlayerSoulFragmentsCommand {
     public SetPlayerSoulFragmentsCommand(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("soul_fragments")
+                .requires(source -> source.hasPermission(2))
                 .then(Commands.literal("set")
                         .then(Commands.argument("number", IntegerArgumentType.integer()).executes(this::setSoul_Fragments))));
     }

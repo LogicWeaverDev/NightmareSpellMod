@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerPlayer;
 public class SetPlayerClassCommand {
     public SetPlayerClassCommand(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("class")
+                .requires(source -> source.hasPermission(2))
                 .then(Commands.literal("set")
                         .then(Commands.argument("number", IntegerArgumentType.integer()).executes(this::setClass))));
     }

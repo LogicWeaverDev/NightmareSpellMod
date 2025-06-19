@@ -22,6 +22,7 @@ public class SoulStatManager {
     private static final UUID NMSPELL_SPEED = UUID.fromString("89e8d1df-31da-4335-9fdf-ddb88a4aec54");
     private static final UUID NMSPELL_ARMOR = UUID.fromString("12345678-1234-5678-9abc-def012345678");
     private static final UUID NMSPELL_STEP_UP = UUID.fromString("5b2a0250-8d1c-48d4-881c-067ba87650c2");
+    private static final UUID NMSPELL_SWIM_SPEED = UUID.fromString("3767bb18-17d5-46e6-97d9-aaebbc13b925");
 
     // Track entity sprinting state to avoid unnecessary updates
     public static final Map<UUID, Boolean> wasSprintingMap = new HashMap<>();
@@ -56,6 +57,10 @@ public class SoulStatManager {
         applyAttributeModifier(entity, Attributes.MOVEMENT_SPEED,
                 NMSPELL_SPEED, "Nightmare Spell Speed",
                 (soul.getBonus()/150)*0.77, AttributeModifier.Operation.ADDITION);
+
+        applyAttributeModifier(entity, ForgeMod.SWIM_SPEED.get(),
+                NMSPELL_SWIM_SPEED, "Nightmare Spell Swim Speed",
+                soul.getBonus()/150, AttributeModifier.Operation.ADDITION);
 
         // Apply armor bonus
         applyAttributeModifier(entity, Attributes.ARMOR,
@@ -101,6 +106,11 @@ public class SoulStatManager {
         // Apply base movement speed bonus (not sprint bonus)
         applyAttributeModifier(entity, Attributes.MOVEMENT_SPEED,
                 NMSPELL_SPEED, "Nightmare Spell Speed",
+                soul.getBonus()/200, AttributeModifier.Operation.ADDITION);
+
+        // Apply swim speed
+        applyAttributeModifier(entity, ForgeMod.SWIM_SPEED.get(),
+                NMSPELL_SWIM_SPEED, "Nightmare Spell Swim Speed",
                 soul.getBonus()/200, AttributeModifier.Operation.ADDITION);
 
         // Apply armor bonus

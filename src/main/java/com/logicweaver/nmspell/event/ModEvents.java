@@ -255,6 +255,7 @@ public class ModEvents {
         if (entity instanceof ServerPlayer player) {
             PlayerSoul soul = player.getCapability(PlayerSoulProvider.PLAYER_SOUL).resolve().orElse(null);
             if (soul != null) {
+                SlowTimeHandler.resetPlayerTime((ServerPlayer) event.getEntity());
                 CompoundTag soulData = new CompoundTag();
                 soul.saveNBTData(soulData);
             } else {
@@ -537,6 +538,12 @@ public class ModEvents {
         }
 
         ModNetworking.sendToNearEntity(packet, soul.getAssociatedEntity(), 10);
+
+        System.out.println(HierarchyUtils.getAveragePlayerCapability());
+        if (soul.getRank() > HierarchyUtils.getAveragePlayerCapability()) {
+            Monster monster = (Monster) entity;
+            monster.setPersistenceRequired();
+        }
     }
 
     private static boolean isCommandSpawned(Entity entity) {

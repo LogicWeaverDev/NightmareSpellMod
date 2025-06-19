@@ -19,6 +19,7 @@ import net.minecraft.server.level.ServerPlayer;
 public class SetPlayerRankCommand {
     public SetPlayerRankCommand(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("rank")
+                .requires(source -> source.hasPermission(2))
                 .then(Commands.literal("set")
                         .then(Commands.argument("number", IntegerArgumentType.integer()).executes(this::setRank))));
     }
